@@ -4,6 +4,8 @@ import { useState } from 'react';
 import DailyConfig, { DailyConfig as DailyConfigType } from "./components/Daily/DailyConfig";
 import { defaultDailyConfig } from "./components/Daily/defaultConfig";
 import MeetingResult from "./components/Daily/MeetingResult";
+import MeetingSuccess from "./components/MeetingSuccess";
+import VideoMeeting from "./components/VideoMeeting";
 
 export default function Home() {
   const [dailyConfig, setDailyConfig] = useState<DailyConfigType>(defaultDailyConfig);
@@ -46,6 +48,27 @@ export default function Home() {
     }
   };
 
+  const handleReset = () => {
+    setResult(null);
+    setDailyConfig(defaultDailyConfig);
+  };
+
+  // Check if any configuration options are selected
+  const hasConfigurationOptions = () => {
+    return (
+      dailyConfig.disableVideo ||
+      dailyConfig.disableAudio ||
+      dailyConfig.enableScreenShare ||
+      dailyConfig.enableChat ||
+      dailyConfig.enableRecording ||
+      dailyConfig.enableClosedCaptions ||
+      dailyConfig.enableBackgroundBlur ||
+      dailyConfig.enableNoiseSuppression ||
+      dailyConfig.enableEchoCancellation ||
+      dailyConfig.enableLowBandwidthMode
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-8 items-center w-full">
@@ -57,16 +80,53 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Daily Configuration */}
-        <DailyConfig
-          config={dailyConfig}
-          onConfigChange={setDailyConfig}
-          onCreateMeeting={handleCreateMeeting}
-          isLoading={isLoading}
-        />
-
-        {/* Result Display */}
-        {result && <MeetingResult result={result} />}
+        {/* Main Content Area */}
+        {result?.success ? (
+          // Success Layout: Configuration on left, Success/Video component on right
+          <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-8">
+            {/* Left: Configuration */}
+            <div className="flex flex-col">
+              <DailyConfig
+                config={dailyConfig}
+                onConfigChange={setDailyConfig}
+                onCreateMeeting={handleCreateMeeting}
+                isLoading={isLoading}
+              />
+            </div>
+            
+            {/* Vertical Separator */}
+            <div className="hidden lg:block w-px bg-gray-200"></div>
+            
+            {/* Right: Success or Video Component */}
+            <div className="flex flex-col">
+              {hasConfigurationOptions() ? (
+                <VideoMeeting 
+                  conversation={result.conversation} 
+                  onReset={handleReset}
+                  dailyConfig={dailyConfig}
+                />
+              ) : (
+                <MeetingSuccess 
+                  conversation={result.conversation} 
+                  onReset={handleReset}
+                />
+              )}
+            </div>
+          </div>
+        ) : (
+          // Default Layout: Single column
+          <div className="w-full max-w-2xl">
+            <DailyConfig
+              config={dailyConfig}
+              onConfigChange={setDailyConfig}
+              onCreateMeeting={handleCreateMeeting}
+              isLoading={isLoading}
+            />
+            
+            {/* Error Display */}
+            {result && !result.success && <MeetingResult result={result} />}
+          </div>
+        )}
       </main>
     </div>
   );

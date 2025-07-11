@@ -158,37 +158,7 @@ export default function DailyConfig({ config, onConfigChange, onCreateMeeting, i
           </div>
         </div>
 
-        {/* Quality & Participants */}
-        <div className="space-y-4">
-          <h3 className="font-semibold text-lg">Quality & Participants</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="videoQuality">Video Quality</Label>
-              <select
-                id="videoQuality"
-                value={config.videoQuality}
-                onChange={(e) => handleQualityChange(e.target.value as 'low' | 'medium' | 'high')}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              >
-                <option value="low">Low (480p)</option>
-                <option value="medium">Medium (720p)</option>
-                <option value="high">High (1080p)</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="maxParticipants">Max Participants</Label>
-              <input
-                id="maxParticipants"
-                type="number"
-                min="1"
-                max="50"
-                value={config.maxParticipants}
-                onChange={(e) => handleNumberChange('maxParticipants', parseInt(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
-          </div>
-        </div>
+
 
         {/* Create Meeting Button */}
         <div className="pt-4">
