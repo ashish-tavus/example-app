@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    let body;
+    let dailyConfig;
+    
+    try {
+      body = await request.json();
+      dailyConfig = body?.dailyConfig;
+    } catch (parseError) {
+      // If no body is sent, use default config
+      dailyConfig = null;
+    }
+    
     const apiKey = process.env.TAVUS_API_KEY;
     
     if (!apiKey) {
@@ -11,6 +22,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Use dailyConfig if provided, otherwise use defaults
+    const enableRecording = dailyConfig?.enableRecording ?? true;
+    const enableClosedCaptions = dailyConfig?.enableClosedCaptions ?? true;
+    
     const tavusResponse = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
       headers: {
@@ -28,13 +43,13 @@ export async function POST(request: NextRequest) {
           max_call_duration: 3600,
           participant_left_timeout: 60,
           participant_absent_timeout: 300,
-          enable_recording: true,
-          enable_closed_captions: true,
+          enable_recording: enableRecording,
+          enable_closed_captions: enableClosedCaptions,
           apply_greenscreen: false,
           language: "english",
           recording_s3_bucket_name: "conversation-recordings",
           recording_s3_bucket_region: "us-east-1",
-          aws_assume_role_arn: ""
+          aws_assume_role_arn: "",
         }
       }),
     });
