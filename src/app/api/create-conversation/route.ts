@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Use dailyConfig if provided, otherwise use defaults
-    const enableRecording = dailyConfig?.enableRecording ?? true;
-    const enableClosedCaptions = dailyConfig?.enableClosedCaptions ?? true;
+    const enableRecording = dailyConfig?.enableRecording ?? false;
+    const enableClosedCaptions = dailyConfig?.enableClosedCaptions ?? false;
     
     const tavusResponse = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         conversational_context: "You are about to talk to Hassaan, one of the cofounders of Tavus. He loves to talk about AI, startups, and racing cars.",
         custom_greeting: "Hey there Hassaan, long time no see!",
         properties: {
-          max_call_duration: 3600,
+          max_call_duration: 1000,
           participant_left_timeout: 60,
           participant_absent_timeout: 300,
           enable_recording: enableRecording,
