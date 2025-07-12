@@ -1,29 +1,67 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useAtom } from 'jotai';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Video, Mic, MicOff, Camera, CameraOff, Captions, Square, Circle } from 'lucide-react';
+import { Video, Mic, MicOff, Camera, CameraOff, Captions, Square, Circle, Phone } from 'lucide-react';
 import DailyIframe from '@daily-co/daily-js';
 import { DailyConfig } from './Daily/DailyConfig';
+import { useConversation } from '@/lib/hooks';
 
 // Global call object management to prevent duplicates
+let globalCallObject: any = null;
+
 const getOrCreateCallObject = () => {
-  // Use a property on window to store the singleton
-  if (!(window as any)._dailyCallObject) {
-    (window as any)._dailyCallObject = DailyIframe.createCallObject();
+  if (!globalCallObject) {
+    globalCallObject = DailyIframe.createCallObject();
   }
-  return (window as any)._dailyCallObject;
+  return globalCallObject;
+};
+
+// Function to destroy the global call object
+const destroyCallObject = async () => {
+  console.log('VideoMeeting - Destroying call object');
+  if (globalCallObject) {
+    try {
+      await globalCallObject.leave();
+      console.log('VideoMeeting - Successfully left call during destroy');
+    } catch (err) {
+      console.log('Error leaving call during destroy:', err);
+    }
+    try {
+      globalCallObject.destroy();
+      console.log('VideoMeeting - Successfully destroyed call object');
+    } catch (err) {
+      console.log('Error destroying call object:', err);
+    }
+    globalCallObject = null;
+    console.log('VideoMeeting - Call object destroyed');
+  } else {
+    console.log('VideoMeeting - No call object to destroy');
+  }
 };
 
 interface VideoMeetingProps {
-  conversation: any;
   onReset: () => void;
   dailyConfig?: DailyConfig;
 }
 
-export default function VideoMeeting({ conversation, onReset, dailyConfig }: VideoMeetingProps) {
+export default function VideoMeeting({ onReset, dailyConfig }: VideoMeetingProps) {
+  const { conversation, getConversationId } = useConversation();
   const videoRef = useRef<HTMLDivElement>(null);
+  
+  // Debug: Log conversation data when component mounts or conversation changes
+  useEffect(() => {
+    console.log('VideoMeeting - Component mounted/updated');
+    if (conversation) {
+      console.log('VideoMeeting - Conversation data:', conversation);
+      console.log('VideoMeeting - Conversation ID:', getConversationId());
+      console.log('VideoMeeting - Conversation URL:', conversation.conversation_url);
+    } else {
+      console.log('VideoMeeting - No conversation data available');
+    }
+  }, [conversation, getConversationId]);
   const callRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +73,17 @@ export default function VideoMeeting({ conversation, onReset, dailyConfig }: Vid
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCaptionsOn, setIsCaptionsOn] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isEndingConversation, setIsEndingConversation] = useState(false);
 
   useEffect(() => {
-    if (!conversation?.conversation_url || !videoRef.current) return;
+    console.log('VideoMeeting - useEffect triggered for video call');
+    console.log('VideoMeeting - conversation?.conversation_url:', conversation?.conversation_url);
+    console.log('VideoMeeting - conversation?.conversation_id:', conversation?.conversation_id);
+    
+    if (!conversation?.conversation_url || !videoRef.current) {
+      console.log('VideoMeeting - Skipping video call setup - missing URL or video ref');
+      return;
+    }
 
     const startVideoCall = async () => {
       try {
@@ -49,9 +95,13 @@ export default function VideoMeeting({ conversation, onReset, dailyConfig }: Vid
           videoRef.current.innerHTML = '';
         }
 
-        // Get or create the call object (singleton pattern)
+        // Destroy any existing call object first
+        await destroyCallObject();
+
+        // Create a fresh call object
         const call = getOrCreateCallObject();
         callRef.current = call;
+        console.log('VideoMeeting - Created fresh call object');
 
         // Handle remote participants
         const updateRemoteParticipants = () => {
@@ -72,7 +122,9 @@ export default function VideoMeeting({ conversation, onReset, dailyConfig }: Vid
         call.on('participant-left', updateRemoteParticipants);
 
         // Join the Tavus CVI meeting
+        console.log('VideoMeeting - Joining meeting:', conversation.conversation_url);
         await call.join({ url: conversation.conversation_url });
+        console.log('VideoMeeting - Successfully joined meeting');
         setIsLoading(false);
       } catch (err) {
         console.error('Error starting video call:', err);
@@ -96,7 +148,7 @@ export default function VideoMeeting({ conversation, onReset, dailyConfig }: Vid
         videoRef.current.innerHTML = '';
       }
     };
-  }, [conversation?.conversation_url]);
+  }, [conversation?.conversation_url, conversation?.conversation_id]); // Added conversation_id as dependency
 
 
 
@@ -181,6 +233,46 @@ export default function VideoMeeting({ conversation, onReset, dailyConfig }: Vid
       }
     } catch (err) {
       console.error('Error toggling recording:', err);
+    }
+  };
+
+  const endConversation = async () => {
+    const conversationId = getConversationId();
+    if (!conversationId) {
+      console.error('No conversation ID available');
+      return;
+    }
+
+    try {
+      setIsEndingConversation(true);
+      
+      // Call the Tavus API to end the conversation
+      const response = await fetch('/api/end-conversation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ conversationId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to end conversation');
+      }
+
+      // Leave the Daily call and destroy the call object
+      if (callRef.current) {
+        await callRef.current.leave();
+      }
+      await destroyCallObject();
+
+      // Call the onReset callback to return to the initial state
+      onReset();
+    } catch (err) {
+      console.error('Error ending conversation:', err);
+      setError('Failed to end conversation');
+    } finally {
+      setIsEndingConversation(false);
     }
   };
 
@@ -304,18 +396,44 @@ export default function VideoMeeting({ conversation, onReset, dailyConfig }: Vid
                     {isRecording ? <Square className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
                     {isRecording ? 'Stop Recording' : 'Start Recording'}
                   </Button>
+
+                  {/* End Conversation Button */}
+                  <Button
+                    onClick={endConversation}
+                    variant="destructive"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    disabled={isEndingConversation}
+                  >
+                    <Phone className="h-4 w-4" />
+                    {isEndingConversation ? 'Ending...' : 'End Conversation'}
+                  </Button>
                 </>
               ) : (
-                /* Show only captions when closed captions are enabled */
-                <Button
-                  onClick={toggleCaptions}
-                  variant={isCaptionsOn ? "default" : "outline"}
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Captions className="h-4 w-4" />
-                  {isCaptionsOn ? 'Captions On' : 'Captions Off'}
-                </Button>
+                <>
+                  {/* Show only captions when closed captions are enabled */}
+                  <Button
+                    onClick={toggleCaptions}
+                    variant={isCaptionsOn ? "default" : "outline"}
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Captions className="h-4 w-4" />
+                    {isCaptionsOn ? 'Captions On' : 'Captions Off'}
+                  </Button>
+
+                  {/* End Conversation Button */}
+                  <Button
+                    onClick={endConversation}
+                    variant="destructive"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    disabled={isEndingConversation}
+                  >
+                    <Phone className="h-4 w-4" />
+                    {isEndingConversation ? 'Ending...' : 'End Conversation'}
+                  </Button>
+                </>
               )}
             </div>
           </div>

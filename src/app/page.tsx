@@ -1,20 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useAtom } from 'jotai';
+import { useState, useEffect } from 'react';
 import DailyConfig, { DailyConfig as DailyConfigType } from "./components/Daily/DailyConfig";
 import { defaultDailyConfig } from "./components/Daily/defaultConfig";
-import MeetingResult from "./components/Daily/MeetingResult";
 import MeetingSuccess from "./components/MeetingSuccess";
 import VideoMeeting from "./components/VideoMeeting";
+import { useConversation, useMeetingState } from "@/lib/hooks";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function Home() {
   const [dailyConfig, setDailyConfig] = useState<DailyConfigType>(defaultDailyConfig);
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<{ success?: boolean; error?: string; conversation?: any } | null>(null);
+  const { isLoading, setIsLoading, result, setResult } = useMeetingState();
+  const { conversation, setConversation } = useConversation();
 
   const handleCreateMeeting = async () => {
     setIsLoading(true);
     setResult(null);
+    setConversation(null);
 
     try {
       const response = await fetch('/api/create-conversation', {
@@ -31,9 +35,12 @@ export default function Home() {
       console.log('API Response:', data);
 
       if (response.ok) {
-        setResult({ success: true, conversation: data.conversation });
-        console.log('Conversation data:', data.conversation);
-        console.log('Conversation URL:', data.conversation?.conversation_url);
+        const conversationData = data.conversation;
+        setResult({ success: true, conversation: conversationData });
+        setConversation(conversationData);
+        console.log('Conversation data:', conversationData);
+        console.log('Conversation URL:', conversationData?.conversation_url);
+        console.log('Conversation ID:', conversationData?.conversation_id);
       } else {
         setResult({ error: data.error || 'Failed to create meeting' });
       }
@@ -49,9 +56,25 @@ export default function Home() {
   };
 
   const handleReset = () => {
+    console.log('Home - handleReset called');
     setResult(null);
+    setConversation(null);
     setDailyConfig(defaultDailyConfig);
+    // Force a complete state reset
+    setIsLoading(false);
+    console.log('Home - State reset completed');
   };
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('Home - State changed:', {
+      hasResult: !!result,
+      resultSuccess: result?.success,
+      hasConversation: !!conversation,
+      conversationId: conversation?.conversation_id,
+      isLoading
+    });
+  }, [result, conversation, isLoading]);
 
   // Check if any configuration options are selected
   const hasConfigurationOptions = () => {
@@ -101,7 +124,7 @@ export default function Home() {
             <div className="flex flex-col">
               {hasConfigurationOptions() ? (
                 <VideoMeeting 
-                  conversation={result.conversation} 
+                  key={conversation?.conversation_id || 'no-conversation'} // Force re-render when conversation changes
                   onReset={handleReset}
                   dailyConfig={dailyConfig}
                 />
@@ -124,7 +147,12 @@ export default function Home() {
             />
             
             {/* Error Display */}
-            {result && !result.success && <MeetingResult result={result} />}
+            {result && !result.success && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{result.error}</AlertDescription>
+              </Alert>
+            )}
           </div>
         )}
       </main>
