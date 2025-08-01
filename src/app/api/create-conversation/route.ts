@@ -2,17 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    let body;
-    let dailyConfig;
-    
-    try {
-      body = await request.json();
-      dailyConfig = body?.dailyConfig;
-    } catch (parseError) {
-      // If no body is sent, use default config
-      dailyConfig = null;
-    }
-    
     const apiKey = process.env.TAVUS_API_KEY;
     
     if (!apiKey) {
@@ -22,9 +11,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use dailyConfig if provided, otherwise use defaults
-    const enableRecording = dailyConfig?.enableRecording ?? false;
-    const enableClosedCaptions = dailyConfig?.enableClosedCaptions ?? false;
+    // Use default values for recording and closed captions
+    const enableRecording = false;
+    const enableClosedCaptions = false;
     
     const tavusResponse = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
