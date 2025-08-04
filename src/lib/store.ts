@@ -7,7 +7,7 @@ export interface Conversation {
   status?: string;
   created_at?: string;
   callback_url?: string;
-  [key: string]: any; // Allow for additional properties from Tavus API
+  [key: string]: string | number | boolean | undefined; // Allow for additional properties from Tavus API
 }
 
 // Global conversation state

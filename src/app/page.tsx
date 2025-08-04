@@ -51,7 +51,7 @@ export default function Home() {
             <div className="flex justify-start">
               <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-xs">
                 <p className="text-sm text-gray-800">
-                  Awesome! So let's discuss the project timeline. I think we can finish the first phase by next week.
+                  Awesome! So let&apos;s discuss the project timeline. I think we can finish the first phase by next week.
                 </p>
                 <p className="text-xs text-gray-500 mt-1">2:31 PM</p>
               </div>
@@ -71,7 +71,7 @@ export default function Home() {
             <div className="flex justify-start">
               <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-xs">
                 <p className="text-sm text-gray-800">
-                  Yes, I'll share them with you right after this call. They're looking really good!
+                  Yes, I&apos;ll share them with you right after this call. They&apos;re looking really good!
                 </p>
                 <p className="text-xs text-gray-500 mt-1">2:33 PM</p>
               </div>
@@ -81,7 +81,7 @@ export default function Home() {
             <div className="flex justify-end">
               <div className="bg-blue-500 rounded-lg px-4 py-2 max-w-xs">
                 <p className="text-sm text-white">
-                  Perfect! I'm excited to see them. Should we schedule a follow-up meeting for Friday?
+                  Perfect! I&apos;m excited to see them. Should we schedule a follow-up meeting for Friday?
                 </p>
                 <p className="text-xs text-blue-100 mt-1">2:34 PM</p>
               </div>

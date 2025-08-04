@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Video, ArrowLeft, Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
+import { PhoneOff, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 import { 
   useDaily, 
   useDailyEvent, 
   useLocalParticipant, 
-  useParticipantIds,
-  useMeetingState 
+  useParticipantIds
 } from '@daily-co/daily-react';
 import { DailyVideo } from '@daily-co/daily-react';
 
@@ -32,7 +32,6 @@ export function VideoBox({
   const [videoError, setVideoError] = useState(false);
   const [isInChat, setIsInChat] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [timeElapsed, setTimeElapsed] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
@@ -43,7 +42,6 @@ export function VideoBox({
 
   // Daily React hooks
   const daily = useDaily();
-  const meetingState = useMeetingState();
   const localParticipant = useLocalParticipant();
   const participantIds = useParticipantIds();
 
@@ -55,15 +53,7 @@ export function VideoBox({
     }
   }, [participantIds, localParticipant]);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isConnected) {
-      interval = setInterval(() => {
-        setTimeElapsed(prev => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isConnected]);
+
 
   // Daily React event handlers
   useDailyEvent('joined-meeting', () => {
@@ -82,11 +72,7 @@ export function VideoBox({
     setIsLoading(false);
   });
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+
 
   const handleStartConversation = async () => {
     setIsLoading(true);
@@ -125,17 +111,7 @@ export function VideoBox({
     }
   };
 
-  const handleBackToPreview = async () => {
-    if (daily) {
-      await daily.leave();
-    }
-    setIsInChat(false);
-    setIsConnected(false);
-    setTimeElapsed(0);
-    setShowOverlay(true);
-    setConversationId(null);
-    setConversationUrl(null);
-  };
+
 
   const handleEndCall = async () => {
     if (conversationId) {
@@ -164,7 +140,6 @@ export function VideoBox({
     }
     
     setIsConnected(false);
-    setTimeElapsed(0);
     setConversationId(null);
     setConversationUrl(null);
     setShowFeedback(true);
@@ -176,11 +151,7 @@ export function VideoBox({
     }
   };
 
-  const toggleVideo = () => {
-    if (daily && localParticipant) {
-      daily.setLocalVideo(!localParticipant.video);
-    }
-  };
+
 
   const handleVideoError = () => {
     setVideoError(true);
@@ -259,11 +230,12 @@ export function VideoBox({
                 Your browser does not support the video tag.
               </video>
             ) : (
-              <img
+              <Image
                 src="https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f/67bf72cdf131ec10cbd8c67b_newmike%20(1).gif"
                 alt="Charlie calling"
-                className="w-full h-full object-cover"
-                style={{ width: '100%', height: '100%' }}
+                fill
+                className="object-cover"
+                unoptimized
               />
             )}
           </div>
