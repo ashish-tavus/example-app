@@ -10,7 +10,7 @@ import {
   useLocalParticipant, 
   useParticipantIds
 } from '@daily-co/daily-react';
-import { DailyVideo } from '@daily-co/daily-react';
+import { DailyVideo, DailyAudio } from '@daily-co/daily-react';
 
 interface VideoBoxProps {
   posterUrl?: string;
@@ -177,6 +177,9 @@ export function VideoBox({
         {isInChat && conversationUrl ? (
           // Daily Video Call
           <div className="w-full h-full relative bg-black rounded-2xl overflow-hidden shadow-2xl">
+            {/* DailyAudio component handles all participants' audio */}
+            <DailyAudio />
+            
             {participantIds.map((participantId) => {
               const isLocal = localParticipant?.session_id === participantId;
               
