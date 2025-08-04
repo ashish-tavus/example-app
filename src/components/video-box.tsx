@@ -200,12 +200,12 @@ export function VideoBox({
   };
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto">
-      <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl">
+    <div className="relative w-full h-full">
+      <div className="relative w-full h-full overflow-hidden p-6">
         {/* Video Element or Daily Video */}
         {isInChat && conversationUrl ? (
           // Daily Video Call
-          <div className="w-full h-full">
+          <div className="w-full h-full relative bg-black rounded-2xl overflow-hidden shadow-2xl">
             {participantIds.map((participantId) => {
               const isLocal = localParticipant?.session_id === participantId;
               
@@ -223,11 +223,17 @@ export function VideoBox({
               } else {
                 // Remote participant (Tavus) - main video taking up the full screen
                 return (
-                  <div key={participantId} className="absolute inset-0 z-10">
+                  <div key={participantId} className="absolute inset-0 z-10 bg-black">
                     <DailyVideo
                       sessionId={participantId}
                       type="video"
                       className="w-full h-full object-cover"
+                      style={{ 
+                        width: '100%', 
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block'
+                      }}
                     />
                   </div>
                 );
@@ -235,8 +241,8 @@ export function VideoBox({
             })}
           </div>
         ) : (
-          // Preview Video
-          <>
+          // Preview Video/GIF
+          <div className="w-full h-full relative bg-black rounded-2xl overflow-hidden shadow-2xl">
             {!videoError && !forceGif ? (
               <video
                 ref={videoRef}
@@ -245,6 +251,7 @@ export function VideoBox({
                 muted
                 playsInline
                 onError={handleVideoError}
+                style={{ width: '100%', height: '100%' }}
               >
                 {videoUrls.map((url, index) => (
                   <source key={index} src={url} type={url.includes('.webm') ? 'video/webm' : 'video/mp4'} />
@@ -256,14 +263,15 @@ export function VideoBox({
                 src="https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f/67bf72cdf131ec10cbd8c67b_newmike%20(1).gif"
                 alt="Charlie calling"
                 className="w-full h-full object-cover"
+                style={{ width: '100%', height: '100%' }}
               />
             )}
-          </>
+          </div>
         )}
 
         {/* Chat Overlay - Only show when joining */}
         {isInChat && !isConnected && !showFeedback && (
-          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+          <div className="absolute inset-6 bg-black/20 flex items-center justify-center z-30 rounded-2xl">
             <div className="text-center text-white">
               <div className="w-16 h-16 mx-auto mb-4 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center animate-pulse">
                 <div className="w-8 h-8 bg-white rounded-full"></div>
@@ -276,7 +284,7 @@ export function VideoBox({
 
         {/* Call Controls - Show when connected */}
         {isInChat && isConnected && !showFeedback && (
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-30">
+          <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex space-x-2 z-30">
             <Button
               onClick={toggleAudio}
               className={`rounded-full p-3 ${
@@ -299,7 +307,7 @@ export function VideoBox({
 
         {/* Feedback Overlay */}
         {showFeedback && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-40">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
                 Did it solve the issue?
@@ -353,7 +361,7 @@ export function VideoBox({
 
         {/* Preview Overlay */}
         {showOverlay && !isInChat && (
-          <div className="absolute inset-0 bg-black/30 flex flex-col justify-end">
+          <div className="absolute inset-6 bg-black/30 flex flex-col justify-end z-30 rounded-2xl">
             {/* Bottom section with button */}
             <div className="flex justify-center pb-8">
               <button
