@@ -11,9 +11,7 @@ export async function POST() {
       );
     }
 
-    // Use default values for recording and closed captions
-    const enableRecording = false;
-    const enableClosedCaptions = false;
+
     
     const tavusResponse = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
@@ -25,20 +23,19 @@ export async function POST() {
         replica_id: process.env.TAVUS_REPLICA_ID || "r79e1c033f",
         persona_id: process.env.TAVUS_PERSONA_ID || "p5317866",
         callback_url: process.env.TAVUS_CALLBACK_URL || "https://yourwebsite.com/webhook",
-        conversation_name: "A Meeting with Hassaan",
-        conversational_context: "You are about to talk to Hassaan, one of the cofounders of Tavus. He loves to talk about AI, startups, and racing cars.",
-        custom_greeting: "Hey there Hassaan, long time no see!",
+        conversation_name: "Conversation with Tavus Customer",
+        custom_greeting: "Hey there! How can I help you today?",
         properties: {
           max_call_duration: 1000,
           participant_left_timeout: 60,
           participant_absent_timeout: 300,
-          enable_recording: enableRecording,
-          enable_closed_captions: enableClosedCaptions,
+          enable_recording: true,
+          enable_closed_captions: true,
           apply_greenscreen: false,
           language: "english",
-          recording_s3_bucket_name: "conversation-recordings",
-          recording_s3_bucket_region: "us-east-1",
-          aws_assume_role_arn: "",
+          recording_s3_bucket_name: process.env.TAVUS_RECORDING_S3_BUCKET_NAME,
+          recording_s3_bucket_region: process.env.TAVUS_RECORDING_S3_BUCKET_REGION,
+          aws_assume_role_arn: process.env.TAVUS_AWS_ASSUME_ROLE_ARN,
         }
       }),
     });
