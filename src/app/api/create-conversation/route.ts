@@ -11,8 +11,6 @@ export async function POST() {
       );
     }
 
-
-    
     const tavusResponse = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
       headers: {
@@ -20,9 +18,9 @@ export async function POST() {
         'x-api-key': apiKey,
       },
       body: JSON.stringify({
-        replica_id: process.env.TAVUS_REPLICA_ID || "r79e1c033f",
-        persona_id: process.env.TAVUS_PERSONA_ID || "p5317866",
-        callback_url: process.env.TAVUS_CALLBACK_URL || "https://yourwebsite.com/webhook",
+        replica_id: process.env.TAVUS_REPLICA_ID,
+        persona_id: process.env.TAVUS_PERSONA_ID,
+        callback_url: process.env.TAVUS_CALLBACK_URL,
         conversation_name: "Conversation with Tavus Customer",
         custom_greeting: "Hey there! How can I help you today?",
         properties: {

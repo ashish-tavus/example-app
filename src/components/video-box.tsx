@@ -274,23 +274,50 @@ export function VideoBox({
 
         {/* Call Controls - Show when connected */}
         {isInChat && isConnected && !showFeedback && (
-          <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex space-x-2 z-30">
+          <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center space-x-4 z-30">
+            {/* Mute/Unmute Button */}
             <Button
               onClick={toggleAudio}
-              className={`rounded-full p-3 ${
-                localParticipant?.audio 
-                  ? 'bg-gray-600 hover:bg-gray-700' 
-                  : 'bg-red-600 hover:bg-red-700'
-              }`}
+              variant="ghost"
+              size="icon"
+              className={`
+                relative w-14 h-14 rounded-full call-control-transition glass-effect
+                ${localParticipant?.audio 
+                  ? 'bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/50' 
+                  : 'bg-red-500/90 hover:bg-red-600 text-white border border-red-400/50 hover:border-red-400 shadow-lg animate-button-pulse'
+                }
+                hover:scale-110 active:scale-95 call-control-focus
+              `}
+              aria-label={localParticipant?.audio ? 'Mute microphone' : 'Unmute microphone'}
             >
-              {localParticipant?.audio ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+              {localParticipant?.audio ? (
+                <Mic className="w-6 h-6 transition-transform duration-200" />
+              ) : (
+                <MicOff className="w-6 h-6 transition-transform duration-200" />
+              )}
+              
+              {/* Ripple effect for mute state */}
+              {!localParticipant?.audio && (
+                <div className="absolute inset-0 rounded-full bg-red-400/30 animate-ping"></div>
+              )}
             </Button>
 
+            {/* End Call Button */}
             <Button
               onClick={handleEndCall}
-              className="bg-red-600 hover:bg-red-700 rounded-full p-3"
+              variant="ghost"
+              size="icon"
+              className="
+                relative w-14 h-14 rounded-full bg-red-600 hover:bg-red-700 text-white 
+                border border-red-500/50 hover:border-red-400 call-control-transition glass-effect
+                hover:scale-110 active:scale-95 shadow-lg call-control-focus
+              "
+              aria-label="End call"
             >
-              <PhoneOff className="w-5 h-5" />
+              <PhoneOff className="w-6 h-6 transition-transform duration-200" />
+              
+              {/* Pulse animation for end call button */}
+              <div className="absolute inset-0 rounded-full bg-red-400/20 animate-pulse"></div>
             </Button>
           </div>
         )}
