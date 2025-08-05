@@ -1,6 +1,6 @@
 import { useAtom } from 'jotai';
-import { conversationAtom, isLoadingAtom, meetingResultAtom, errorAtom } from './store';
-import type { Conversation } from './store';
+import { conversationAtom, isLoadingAtom, meetingResultAtom, errorAtom, messagesAtom } from './store';
+import type { Conversation, ChatMessage } from './store';
 
 export const useConversation = () => {
   const [conversation, setConversation] = useAtom(conversationAtom);
@@ -41,5 +41,52 @@ export const useMeetingState = () => {
     setResult,
     error,
     setError,
+  };
+};
+
+export const useMessages = () => {
+  const [messages, setMessages] = useAtom(messagesAtom);
+
+  const addMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    const newMessage: ChatMessage = {
+      ...message,
+      id: crypto.randomUUID(),
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
+  const clearMessages = () => {
+    setMessages([]);
+  };
+
+  interface UtteranceEvent {
+    message_type: string;
+    event_type: string;
+    conversation_id: string;
+    inference_id?: string;
+    properties: {
+      role: 'user' | 'replica';
+      speech: string;
+      visual_context?: string;
+    };
+  }
+
+  const addUtteranceMessage = (utteranceEvent: UtteranceEvent) => {
+    const { properties } = utteranceEvent;
+    if (properties?.role && properties?.speech) {
+      addMessage({
+        role: properties.role,
+        text: properties.speech,
+        visualContext: properties.visual_context,
+      });
+    }
+  };
+
+  return {
+    messages,
+    addMessage,
+    addUtteranceMessage,
+    clearMessages,
   };
 }; 

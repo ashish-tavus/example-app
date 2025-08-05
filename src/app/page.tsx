@@ -2,8 +2,23 @@
 
 import { VideoBox } from '@/components/video-box';
 import { BackgroundGradient } from '@/components/ui/background-gradient';
+import { useMessages } from '@/lib/hooks';
+import { format } from 'date-fns';
+import { useEffect, useRef } from 'react';
 
 export default function Home() {
+  const { messages } = useMessages();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const formatTime = (date: Date) => {
+    return format(date, 'h:mm a');
+  };
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="h-screen flex">
@@ -27,65 +42,29 @@ export default function Home() {
           
           {/* Chat Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Other participant message */}
-            <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-xs">
-                <p className="text-sm text-gray-800">
-                  Hey! Can you see and hear me clearly?
-                </p>
-                <p className="text-xs text-gray-500 mt-1">2:30 PM</p>
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                <p>No messages yet. Start the conversation to see messages here.</p>
               </div>
-            </div>
-            
-            {/* Your message */}
-            <div className="flex justify-end">
-              <div className="bg-blue-500 rounded-lg px-4 py-2 max-w-xs">
-                <p className="text-sm text-white">
-                  Yes, perfect! The video quality looks great.
-                </p>
-                <p className="text-xs text-blue-100 mt-1">2:31 PM</p>
-              </div>
-            </div>
-            
-            {/* Other participant message */}
-            <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-xs">
-                <p className="text-sm text-gray-800">
-                  Awesome! So let&apos;s discuss the project timeline. I think we can finish the first phase by next week.
-                </p>
-                <p className="text-xs text-gray-500 mt-1">2:31 PM</p>
-              </div>
-            </div>
-            
-            {/* Your message */}
-            <div className="flex justify-end">
-              <div className="bg-blue-500 rounded-lg px-4 py-2 max-w-xs">
-                <p className="text-sm text-white">
-                  That sounds reasonable. Do you have the design mockups ready?
-                </p>
-                <p className="text-xs text-blue-100 mt-1">2:32 PM</p>
-              </div>
-            </div>
-            
-            {/* Other participant message */}
-            <div className="flex justify-start">
-              <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-xs">
-                <p className="text-sm text-gray-800">
-                  Yes, I&apos;ll share them with you right after this call. They&apos;re looking really good!
-                </p>
-                <p className="text-xs text-gray-500 mt-1">2:33 PM</p>
-              </div>
-            </div>
-            
-            {/* Your message */}
-            <div className="flex justify-end">
-              <div className="bg-blue-500 rounded-lg px-4 py-2 max-w-xs">
-                <p className="text-sm text-white">
-                  Perfect! I&apos;m excited to see them. Should we schedule a follow-up meeting for Friday?
-                </p>
-                <p className="text-xs text-blue-100 mt-1">2:34 PM</p>
-              </div>
-            </div>
+            ) : (
+              messages.map((message) => (
+                <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`rounded-lg px-4 py-2 max-w-xs ${
+                    message.role === 'user' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    <p className="text-sm">{message.text}</p>
+                    <p className={`text-xs mt-1 ${
+                      message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
+                    }`}>
+                      {formatTime(message.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
           </div>
           
           {/* Chat Input */}
@@ -93,7 +72,7 @@ export default function Home() {
             <div className="flex space-x-2">
               <input
                 type="text"
-                placeholder="Type a message..."
+                placeholder="Type a message...( Not working yet )"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">

@@ -11,6 +11,7 @@ import {
   useParticipantIds
 } from '@daily-co/daily-react';
 import { DailyVideo, DailyAudio } from '@daily-co/daily-react';
+import { useMessages } from '@/lib/hooks';
 
 interface VideoBoxProps {
   posterUrl?: string;
@@ -45,6 +46,9 @@ export function VideoBox({
   const localParticipant = useLocalParticipant();
   const participantIds = useParticipantIds();
 
+  // Message management
+  const { addUtteranceMessage, clearMessages } = useMessages();
+
   // Debug logging
   useEffect(() => {
     if (participantIds.length > 0) {
@@ -52,8 +56,6 @@ export function VideoBox({
       console.log('Local participant:', localParticipant);
     }
   }, [participantIds, localParticipant]);
-
-
 
   // Daily React event handlers
   useDailyEvent('joined-meeting', () => {
@@ -72,6 +74,16 @@ export function VideoBox({
     setIsLoading(false);
   });
 
+  // Listen for app-message events (Tavus utterance events)
+  useDailyEvent('app-message', (event) => {
+    console.log('App message received:', event);
+    
+    // Check if this is a conversation utterance event
+    if (event.data?.message_type === 'conversation' && event.data?.event_type === 'conversation.utterance') {
+      console.log('Utterance event received:', event.data);
+      addUtteranceMessage(event.data);
+    }
+  });
 
 
   const handleStartConversation = async () => {
@@ -96,6 +108,9 @@ export function VideoBox({
       setIsInChat(true);
       setShowOverlay(false);
       console.log('Conversation created successfully:', data.conversation);
+      
+      // Clear previous messages when starting a new conversation
+      clearMessages();
       
       // Join the Daily call
       if (daily && data.conversation.conversation_url) {
