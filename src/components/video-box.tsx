@@ -51,13 +51,19 @@ export function VideoBox({
   // Message management
   const { messages, addUtteranceMessage, clearMessages } = useMessages();
 
-  // Debug logging
+  // Debug logging and connection state management
   useEffect(() => {
     if (participantIds.length > 0) {
       console.log('Participant IDs:', participantIds);
       console.log('Local participant:', localParticipant);
+
+      // If we have participants and we're in chat mode, we should be connected
+      if (isInChat && participantIds.length > 0 && !isConnected) {
+        console.log('Setting isConnected to true based on participant count');
+        setIsConnected(true);
+      }
     }
-  }, [participantIds, localParticipant]);
+  }, [participantIds, localParticipant, isInChat, isConnected]);
 
   // Daily React event handlers
   useDailyEvent('joined-meeting', () => {
