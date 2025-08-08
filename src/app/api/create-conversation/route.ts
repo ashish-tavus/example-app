@@ -11,6 +11,11 @@ export async function POST() {
       );
     }
 
+    // Parse document IDs from environment variable
+    const documentIds = process.env.TAVUS_DOCUMENT_IDS 
+      ? process.env.TAVUS_DOCUMENT_IDS.split(',').map(id => id.trim()).filter(id => id.length > 0)
+      : [];
+
     const tavusResponse = await fetch('https://tavusapi.com/v2/conversations', {
       method: 'POST',
       headers: {
@@ -23,6 +28,7 @@ export async function POST() {
         callback_url: process.env.TAVUS_CALLBACK_URL,
         conversation_name: "Conversation with Tavus Customer",
         custom_greeting: "Hey there! How can I help you today?",
+        document_ids: documentIds,
         properties: {
           max_call_duration: 1000,
           participant_left_timeout: 60,

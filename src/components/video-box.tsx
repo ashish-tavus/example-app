@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { PhoneOff, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import { StatefulButton } from '@/components/ui/stateful-button';
 import { 
   useDaily, 
   useDailyEvent, 
@@ -12,6 +13,8 @@ import {
 } from '@daily-co/daily-react';
 import { DailyVideo, DailyAudio } from '@daily-co/daily-react';
 import { useMessages } from '@/lib/hooks';
+import { FeedbackDialog } from '@/components/ui/feedback-dialog';
+import { generateChatTranscript } from '@/lib/utils';
 
 interface VideoBoxProps {
   posterUrl?: string;
@@ -37,8 +40,7 @@ export function VideoBox({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [feedbackAnswer, setFeedbackAnswer] = useState<'yes' | 'no' | null>(null);
-  const [feedbackText, setFeedbackText] = useState('');
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Daily React hooks
@@ -47,7 +49,7 @@ export function VideoBox({
   const participantIds = useParticipantIds();
 
   // Message management
-  const { addUtteranceMessage, clearMessages } = useMessages();
+  const { messages, addUtteranceMessage, clearMessages } = useMessages();
 
   // Debug logging
   useEffect(() => {
@@ -82,6 +84,41 @@ export function VideoBox({
     if (event.data?.message_type === 'conversation' && event.data?.event_type === 'conversation.utterance') {
       console.log('Utterance event received:', event.data);
       addUtteranceMessage(event.data);
+    }
+  });
+
+  // Listen for transcription events
+  useDailyEvent('transcription-started', (event) => {
+    console.log('🟢 Transcription started:', event);
+    setIsTranscribing(true);
+  });
+
+  useDailyEvent('transcription-stopped', (event) => {
+    console.log('🔴 Transcription stopped:', event);
+    setIsTranscribing(false);
+  });
+
+  useDailyEvent('transcription-error', (event) => {
+    console.error('❌ Transcription error:', event);
+    setIsTranscribing(false);
+  });
+
+  useDailyEvent('transcription-message', (event) => {
+    console.log('📝 Transcription message received:', event);
+    
+    // Log the transcript data to console with safe property access
+    const transcriptData = {
+      text: (event as any).text,
+      speaker: (event as any).participantId || 'Unknown',
+      timestamp: (event as any).timestamp ? new Date((event as any).timestamp).toLocaleTimeString() : 'Unknown',
+      isFinal: (event as any).isFinal || false
+    };
+    
+    console.log('🗣️  Transcript:', transcriptData);
+    
+    // If it's a final transcript, log it more prominently
+    if (transcriptData.isFinal) {
+      console.log(`🎯 FINAL TRANSCRIPT [${transcriptData.speaker}]: "${transcriptData.text}"`);
     }
   });
 
@@ -155,9 +192,10 @@ export function VideoBox({
     }
     
     setIsConnected(false);
-    setConversationId(null);
     setConversationUrl(null);
+    console.log('Setting showFeedback to true, conversationId:', conversationId);
     setShowFeedback(true);
+    // Don't clear conversationId until after feedback is submitted
   };
 
   const toggleAudio = () => {
@@ -166,23 +204,45 @@ export function VideoBox({
     }
   };
 
-
-
   const handleVideoError = () => {
     setVideoError(true);
     console.log('Video failed to load, showing GIF fallback');
   };
 
-  const handleFeedbackSubmit = async () => {
-    // Here you can send the feedback to your backend
-    console.log('Feedback submitted:', { answer: feedbackAnswer, text: feedbackText });
+  const handleFeedbackSubmit = async (feedback: 'yes' | 'no', additionalFeedback?: string, email?: string) => {
+    if (!conversationId) {
+      throw new Error('No conversation ID available');
+    }
+
+    const chatTranscript = generateChatTranscript(messages);
     
-    // Reset to initial state
+    const response = await fetch('/api/send-feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        IssueResolved: feedback,
+        ConversationID: conversationId,
+        Feedback: additionalFeedback || '',
+        TavusUserAccount: email || '', // Using email as user account for now
+        ChatTranscript: chatTranscript,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to submit feedback');
+    }
+
+    console.log('Feedback submitted successfully:', { feedback, conversationId, additionalFeedback, email });
+  };
+
+  const handleFeedbackClose = () => {
     setShowFeedback(false);
-    setFeedbackAnswer(null);
-    setFeedbackText('');
     setIsInChat(false);
     setShowOverlay(true);
+    setConversationId(null); // Clear conversation ID after feedback is done
   };
 
   return (
@@ -252,6 +312,7 @@ export function VideoBox({
                 src="https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f/67bf72cdf131ec10cbd8c67b_newmike%20(1).gif"
                 alt="Charlie calling"
                 fill
+                priority
                 className="object-cover"
                 unoptimized
               />
@@ -259,18 +320,7 @@ export function VideoBox({
           </div>
         )}
 
-        {/* Chat Overlay - Only show when joining */}
-        {isInChat && !isConnected && !showFeedback && (
-          <div className="absolute inset-6 bg-black/20 flex items-center justify-center z-30 rounded-2xl">
-            <div className="text-center text-white">
-              <div className="w-16 h-16 mx-auto mb-4 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center animate-pulse">
-                <div className="w-8 h-8 bg-white rounded-full"></div>
-              </div>
-              <h2 className="text-xl font-semibold mb-2">Joining Call...</h2>
-              <p className="text-white/80">Connecting to Charlie</p>
-            </div>
-          </div>
-        )}
+
 
         {/* Call Controls - Show when connected */}
         {isInChat && isConnected && !showFeedback && (
@@ -301,7 +351,6 @@ export function VideoBox({
                 <div className="absolute inset-0 rounded-full bg-red-400/30 animate-ping"></div>
               )}
             </Button>
-
             {/* End Call Button */}
             <Button
               onClick={handleEndCall}
@@ -322,58 +371,13 @@ export function VideoBox({
           </div>
         )}
 
-        {/* Feedback Overlay */}
+        {/* Feedback Dialog */}
         {showFeedback && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-40">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4 text-center">
-                Did it solve the issue?
-              </h2>
-              
-              <div className="flex space-x-4 mb-4">
-                <button
-                  onClick={() => setFeedbackAnswer('yes')}
-                  className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${
-                    feedbackAnswer === 'yes'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-300 hover:border-green-500'
-                  }`}
-                >
-                  Yes
-                </button>
-                <button
-                  onClick={() => setFeedbackAnswer('no')}
-                  className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${
-                    feedbackAnswer === 'no'
-                      ? 'border-red-500 bg-red-50 text-red-700'
-                      : 'border-gray-300 hover:border-red-500'
-                  }`}
-                >
-                  No
-                </button>
-              </div>
-
-              {feedbackAnswer === 'no' && (
-                <div className="mb-4">
-                  <textarea
-                    value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value)}
-                    placeholder="Please tell us more about the issue..."
-                    className="w-full p-3 border border-gray-300 rounded-lg resize-none"
-                    rows={3}
-                  />
-                </div>
-              )}
-
-              <button
-                onClick={handleFeedbackSubmit}
-                disabled={!feedbackAnswer}
-                className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Submit
-              </button>
-            </div>
-          </div>
+          <FeedbackDialog
+            conversationId={conversationId || 'debug-conversation-id'}
+            onClose={handleFeedbackClose}
+            onFeedbackSubmit={handleFeedbackSubmit}
+          />
         )}
 
         {/* Preview Overlay */}
@@ -381,28 +385,17 @@ export function VideoBox({
           <div className="absolute inset-6 bg-black/30 flex flex-col justify-end z-30 rounded-2xl">
             {/* Bottom section with button */}
             <div className="flex justify-center pb-8">
-              <button
+              <StatefulButton
                 onClick={handleStartConversation}
-                disabled={isLoading}
-                className="group relative px-8 py-3 bg-pink/20 backdrop-blur-sm text-white font-medium rounded-full hover:bg-pink/30 transition-all duration-300 border border-pink/30 hover:border-pink/50 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                loadingText="Connecting..."
+                successText="Connected!"
+                className="min-w-[180px] backdrop-blur-sm shadow-lg"
               >
-                <div className="absolute inset-0 bg-pink/20 rounded-full animate-ping"></div>
-                <span className="relative z-10">
-                  {isLoading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Connecting...
-                    </div>
-                  ) : (
-                    "Start Video Chat"
-                  )}
-                </span>
-              </button>
+               Let's Chat
+              </StatefulButton>
             </div>
           </div>
         )}
-
-
       </div>
     </div>
   );
