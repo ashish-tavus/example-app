@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import * as React from "react";
 
 interface StatefulButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loadingText?: string;
@@ -15,16 +15,16 @@ export const StatefulButton = React.forwardRef<HTMLButtonElement, StatefulButton
 
     const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
       if (status !== "idle") return;
-      
+
       try {
         setStatus("loading");
-        
+
         if (onClick) {
           await onClick(e);
         }
-        
+
         setStatus("success");
-        
+
         // Reset back to idle after 2 seconds
         setTimeout(() => {
           setStatus("idle");
@@ -54,11 +54,11 @@ export const StatefulButton = React.forwardRef<HTMLButtonElement, StatefulButton
           className="absolute inset-0 z-0"
           initial={false}
           animate={{
-            backgroundColor: status === "success" 
+            backgroundColor: status === "success"
               ? "rgb(16 185 129)" // emerald-500
               : status === "loading"
-              ? "rgb(99 102 241)" // indigo-500
-              : "rgb(168 85 247)", // purple-500
+                ? "rgb(99 102 241)" // indigo-500
+                : "rgb(168 85 247)", // purple-500
           }}
           transition={{ duration: 0.3 }}
         />
@@ -106,7 +106,7 @@ export const StatefulButton = React.forwardRef<HTMLButtonElement, StatefulButton
                 <div className="relative flex items-center justify-center w-3 h-3">
                   <motion.div
                     initial={false}
-                    animate={{ 
+                    animate={{
                       backgroundColor: ["rgb(34 197 94)", "rgb(239 68 68)", "rgb(34 197 94)"],
                       boxShadow: [
                         "0 0 8px rgba(34, 197, 94, 0.6)",
@@ -129,7 +129,7 @@ export const StatefulButton = React.forwardRef<HTMLButtonElement, StatefulButton
                 </div>
                 <motion.span
                   initial={false}
-                  animate={{ 
+                  animate={{
                     opacity: [1, 0.7, 1],
                     textShadow: [
                       "0 0 0px rgba(255,255,255,0)",
@@ -184,3 +184,5 @@ export const StatefulButton = React.forwardRef<HTMLButtonElement, StatefulButton
     );
   }
 );
+
+StatefulButton.displayName = "StatefulButton";

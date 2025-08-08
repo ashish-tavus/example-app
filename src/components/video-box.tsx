@@ -1,20 +1,22 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { PhoneOff, Mic, MicOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
+import { FeedbackDialog } from '@/components/ui/feedback-dialog';
 import { StatefulButton } from '@/components/ui/stateful-button';
-import { 
-  useDaily, 
-  useDailyEvent, 
-  useLocalParticipant, 
+import { useMessages } from '@/lib/hooks';
+import { generateChatTranscript } from '@/lib/utils';
+import type { DailyEventObject } from '@daily-co/daily-js';
+import {
+  DailyAudio,
+  DailyVideo,
+  useDaily,
+  useDailyEvent,
+  useLocalParticipant,
   useParticipantIds
 } from '@daily-co/daily-react';
-import { DailyVideo, DailyAudio } from '@daily-co/daily-react';
-import { useMessages } from '@/lib/hooks';
-import { FeedbackDialog } from '@/components/ui/feedback-dialog';
-import { generateChatTranscript } from '@/lib/utils';
+import { Mic, MicOff, PhoneOff } from 'lucide-react';
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 
 interface VideoBoxProps {
   posterUrl?: string;
@@ -23,7 +25,7 @@ interface VideoBoxProps {
   forceGif?: boolean;
 }
 
-export function VideoBox({ 
+export function VideoBox({
   posterUrl = "https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f%2F67b5222642c2133d9163ce80_newmike-poster-00001.jpg",
   videoUrls = [
     "https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f%2F67b5222642c2133d9163ce80_newmike-transcode.mp4",
@@ -36,11 +38,9 @@ export function VideoBox({
   const [videoError, setVideoError] = useState(false);
   const [isInChat, setIsInChat] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Daily React hooks
@@ -63,7 +63,6 @@ export function VideoBox({
   useDailyEvent('joined-meeting', () => {
     console.log('Joined Daily meeting successfully');
     setIsConnected(true);
-    setIsLoading(false);
   });
 
   useDailyEvent('left-meeting', () => {
@@ -73,13 +72,12 @@ export function VideoBox({
 
   useDailyEvent('error', (event) => {
     console.error('Daily error:', event);
-    setIsLoading(false);
   });
 
   // Listen for app-message events (Tavus utterance events)
   useDailyEvent('app-message', (event) => {
     console.log('App message received:', event);
-    
+
     // Check if this is a conversation utterance event
     if (event.data?.message_type === 'conversation' && event.data?.event_type === 'conversation.utterance') {
       console.log('Utterance event received:', event.data);
@@ -90,32 +88,29 @@ export function VideoBox({
   // Listen for transcription events
   useDailyEvent('transcription-started', (event) => {
     console.log('🟢 Transcription started:', event);
-    setIsTranscribing(true);
   });
 
   useDailyEvent('transcription-stopped', (event) => {
     console.log('🔴 Transcription stopped:', event);
-    setIsTranscribing(false);
   });
 
   useDailyEvent('transcription-error', (event) => {
     console.error('❌ Transcription error:', event);
-    setIsTranscribing(false);
   });
 
-  useDailyEvent('transcription-message', (event) => {
+  useDailyEvent('transcription-message', (event: DailyEventObject<'transcription-message'>) => {
     console.log('📝 Transcription message received:', event);
-    
-    // Log the transcript data to console with safe property access
+
+    // Log the transcript data to console with proper typing
     const transcriptData = {
-      text: (event as any).text,
-      speaker: (event as any).participantId || 'Unknown',
-      timestamp: (event as any).timestamp ? new Date((event as any).timestamp).toLocaleTimeString() : 'Unknown',
-      isFinal: (event as any).isFinal || false
+      text: event.text,
+      speaker: event.participantId || 'Unknown',
+      timestamp: event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : 'Unknown',
+      isFinal: event.rawResponse?.is_final || false
     };
-    
+
     console.log('🗣️  Transcript:', transcriptData);
-    
+
     // If it's a final transcript, log it more prominently
     if (transcriptData.isFinal) {
       console.log(`🎯 FINAL TRANSCRIPT [${transcriptData.speaker}]: "${transcriptData.text}"`);
@@ -124,7 +119,6 @@ export function VideoBox({
 
 
   const handleStartConversation = async () => {
-    setIsLoading(true);
     try {
       const response = await fetch('/api/create-conversation', {
         method: 'POST',
@@ -145,21 +139,20 @@ export function VideoBox({
       setIsInChat(true);
       setShowOverlay(false);
       console.log('Conversation created successfully:', data.conversation);
-      
+
       // Clear previous messages when starting a new conversation
       clearMessages();
-      
+
       // Join the Daily call
       if (daily && data.conversation.conversation_url) {
         await daily.join({ url: data.conversation.conversation_url });
       }
-      
+
       if (onStartConversation) {
         onStartConversation();
       }
     } catch (error) {
       console.error('Error starting conversation:', error);
-      setIsLoading(false);
     }
   };
 
@@ -186,11 +179,11 @@ export function VideoBox({
         console.error('Error ending call:', error);
       }
     }
-    
+
     if (daily) {
       await daily.leave();
     }
-    
+
     setIsConnected(false);
     setConversationUrl(null);
     console.log('Setting showFeedback to true, conversationId:', conversationId);
@@ -215,7 +208,7 @@ export function VideoBox({
     }
 
     const chatTranscript = generateChatTranscript(messages);
-    
+
     const response = await fetch('/api/send-feedback', {
       method: 'POST',
       headers: {
@@ -254,10 +247,10 @@ export function VideoBox({
           <div className="w-full h-full relative bg-black rounded-2xl overflow-hidden shadow-2xl">
             {/* DailyAudio component handles all participants' audio */}
             <DailyAudio />
-            
+
             {participantIds.map((participantId) => {
               const isLocal = localParticipant?.session_id === participantId;
-              
+
               if (isLocal) {
                 // Local participant (you) - small video in bottom right
                 return (
@@ -277,8 +270,8 @@ export function VideoBox({
                       sessionId={participantId}
                       type="video"
                       className="w-full h-full object-cover"
-                      style={{ 
-                        width: '100%', 
+                      style={{
+                        width: '100%',
                         height: '100%',
                         objectFit: 'cover',
                         display: 'block'
@@ -332,8 +325,8 @@ export function VideoBox({
               size="icon"
               className={`
                 relative w-14 h-14 rounded-full call-control-transition glass-effect
-                ${localParticipant?.audio 
-                  ? 'bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/50' 
+                ${localParticipant?.audio
+                  ? 'bg-white/20 hover:bg-white/30 text-white border border-white/30 hover:border-white/50'
                   : 'bg-red-500/90 hover:bg-red-600 text-white border border-red-400/50 hover:border-red-400 shadow-lg animate-button-pulse'
                 }
                 hover:scale-110 active:scale-95 call-control-focus
@@ -345,7 +338,7 @@ export function VideoBox({
               ) : (
                 <MicOff className="w-6 h-6 transition-transform duration-200" />
               )}
-              
+
               {/* Ripple effect for mute state */}
               {!localParticipant?.audio && (
                 <div className="absolute inset-0 rounded-full bg-red-400/30 animate-ping"></div>
@@ -364,7 +357,7 @@ export function VideoBox({
               aria-label="End call"
             >
               <PhoneOff className="w-6 h-6 transition-transform duration-200" />
-              
+
               {/* Pulse animation for end call button */}
               <div className="absolute inset-0 rounded-full bg-red-400/20 animate-pulse"></div>
             </Button>
@@ -391,7 +384,7 @@ export function VideoBox({
                 successText="Connected!"
                 className="min-w-[180px] backdrop-blur-sm shadow-lg"
               >
-               Let's Chat
+                Let&apos;s Chat
               </StatefulButton>
             </div>
           </div>
