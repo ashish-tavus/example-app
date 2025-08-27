@@ -13,13 +13,52 @@ interface ConversationProps {
 export function Conversation({ className, isUserSpeaking = false, isReplicaSpeaking = false }: ConversationProps) {
   const { messages } = useMessages();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [showListeningIndicator, setShowListeningIndicator] = useState(false);
   const [showSpeakingIndicator, setShowSpeakingIndicator] = useState(false);
 
+  // Smooth auto-scroll function
+  const scrollToBottom = () => {
+    if (messagesContainerRef.current) {
+      const scrollContainer = messagesContainerRef.current;
+      const scrollHeight = scrollContainer.scrollHeight;
+      const height = scrollContainer.clientHeight;
+      const maxScrollTop = scrollHeight - height;
+
+      scrollContainer.scrollTo({
+        top: maxScrollTop,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    scrollToBottom();
   }, [messages]);
+
+  // Also scroll during streaming by setting up an interval when messages are being streamed
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    // If there are messages and the last message might be streaming
+    if (messages.length > 0) {
+      intervalId = setInterval(() => {
+        scrollToBottom();
+      }, 100); // Check every 100ms during potential streaming
+
+      // Clear interval after a reasonable time
+      setTimeout(() => {
+        clearInterval(intervalId);
+      }, 5000); // Clear after 5 seconds
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [messages.length]); // Re-run when number of messages changes
 
   // Handle listening indicator - show while user is speaking, hide when they stop
   useEffect(() => {
@@ -55,7 +94,7 @@ export function Conversation({ className, isUserSpeaking = false, isReplicaSpeak
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <div className="text-center text-gray-500 mt-8">
             <p>Start a conversation to see the transcript here.</p>

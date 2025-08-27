@@ -26,8 +26,13 @@
     "motion": "^12.23.12",
     "next": "15.3.4",
     "nodemailer": "^7.0.5",
+    "prismjs": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
     "simplex-noise": "^4.0.3",
     "tailwind-merge": "^3.3.1"
   },
