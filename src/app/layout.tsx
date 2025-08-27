@@ -1,8 +1,8 @@
+import { DailyProvider } from '@/components/providers/DailyProvider';
+import StoreProvider from '@/components/providers/StoreProvider';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import StoreProvider from '@/components/providers/StoreProvider';
-import { DailyProvider } from '@/components/providers/DailyProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 

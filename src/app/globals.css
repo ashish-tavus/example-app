@@ -3,10 +3,13 @@
 
 /* Custom animations for call controls */
 @keyframes button-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.05);
     opacity: 0.8;
@@ -18,9 +21,31 @@
     transform: scale(0);
     opacity: 1;
   }
+
   100% {
     transform: scale(4);
     opacity: 0;
+  }
+}
+
+/* Gradient animations for replica speaking */
+@keyframes gradient-move {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes gradient-move-reverse {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
   }
 }
 
@@ -30,6 +55,19 @@
 
 .animate-ripple {
   animation: ripple 0.6s ease-out;
+}
+
+.animate-gradient-move {
+  animation: gradient-move 2s linear infinite;
+}
+
+.animate-gradient-move-reverse {
+  animation: gradient-move-reverse 2s linear infinite;
+}
+
+/* Custom z-index for gradient overlay */
+.z-15 {
+  z-index: 15;
 }
 
 /* Smooth transitions for call controls */
@@ -136,6 +174,7 @@ div[class*="daily"],
     border-color: hsl(var(--border));
     outline-color: hsl(var(--ring) / 0.5);
   }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));

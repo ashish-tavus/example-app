@@ -1,17 +1,44 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, useAnimationControls } from "framer-motion";
+import { Video } from "lucide-react";
 import * as React from "react";
 
 interface StatefulButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loadingText?: string;
   successText?: string;
+  idleColor?: string;
+  loadingColor?: string;
+  successColor?: string;
 }
 
 export const StatefulButton = React.forwardRef<HTMLButtonElement, StatefulButtonProps>(
-  ({ className, children, loadingText = "Loading...", successText = "Success!", onClick, ...props }, ref) => {
+  ({
+    className,
+    children,
+    loadingText = "Loading...",
+    successText = "Success!",
+    idleColor = "rgb(168 85 247)", // purple-500
+    loadingColor = "rgb(99 102 241)", // indigo-500
+    successColor = "rgb(16 185 129)", // emerald-500
+    onClick,
+    ...props
+  }, ref) => {
     const [status, setStatus] = React.useState<"idle" | "loading" | "success">("idle");
+    const idleBlinkControls = useAnimationControls();
+
+    React.useEffect(() => {
+      if (status === "idle") {
+        idleBlinkControls.start({
+          opacity: [1, 0.25, 1],
+          transition: { duration: 0.9, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
+        });
+      } else {
+        idleBlinkControls.stop();
+        idleBlinkControls.set({ opacity: 1 });
+      }
+    }, [status, idleBlinkControls]);
 
     const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
       if (status !== "idle") return;
@@ -55,10 +82,10 @@ export const StatefulButton = React.forwardRef<HTMLButtonElement, StatefulButton
           initial={false}
           animate={{
             backgroundColor: status === "success"
-              ? "rgb(16 185 129)" // emerald-500
+              ? successColor
               : status === "loading"
-                ? "rgb(99 102 241)" // indigo-500
-                : "rgb(168 85 247)", // purple-500
+                ? loadingColor
+                : idleColor,
           }}
           transition={{ duration: 0.3 }}
         />
@@ -103,48 +130,13 @@ export const StatefulButton = React.forwardRef<HTMLButtonElement, StatefulButton
           <div className="relative inline-flex items-center gap-2">
             {status === "idle" && (
               <>
-                <div className="relative flex items-center justify-center w-3 h-3">
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      backgroundColor: ["rgb(34 197 94)", "rgb(239 68 68)", "rgb(34 197 94)"],
-                      boxShadow: [
-                        "0 0 8px rgba(34, 197, 94, 0.6)",
-                        "0 0 12px rgba(239, 68, 68, 0.8)",
-                        "0 0 8px rgba(34, 197, 94, 0.6)"
-                      ],
-                      scale: [1, 1.2, 1]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{
-                      backgroundColor: "rgb(34 197 94)", // green-500 as default
-                      boxShadow: "0 0 8px rgba(34, 197, 94, 0.6)"
-                    }}
-                  />
-                </div>
                 <motion.span
-                  initial={false}
-                  animate={{
-                    opacity: [1, 0.7, 1],
-                    textShadow: [
-                      "0 0 0px rgba(255,255,255,0)",
-                      "0 0 8px rgba(255,255,255,0.5)",
-                      "0 0 0px rgba(255,255,255,0)"
-                    ]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
+                  className="flex items-center justify-center"
+                  animate={idleBlinkControls}
                 >
-                  {children}
+                  <Video className="w-4 h-4" />
                 </motion.span>
+                <motion.span animate={idleBlinkControls}>{children}</motion.span>
               </>
             )}
             {status === "loading" && (

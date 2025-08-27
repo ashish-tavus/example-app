@@ -16,23 +16,27 @@ import {
 } from '@daily-co/daily-react';
 import { Mic, MicOff, PhoneOff } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface VideoBoxProps {
   posterUrl?: string;
   videoUrls?: string[];
   onStartConversation?: () => void;
   forceGif?: boolean;
+  onUserSpeakingChange?: (isSpeaking: boolean) => void;
+  onReplicaSpeakingChange?: (isSpeaking: boolean) => void;
 }
 
 export function VideoBox({
   posterUrl = "https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f%2F67b5222642c2133d9163ce80_newmike-poster-00001.jpg",
   videoUrls = [
     "https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f%2F67b5222642c2133d9163ce80_newmike-transcode.mp4",
-    "https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f%2F67b5222642c2133d9163ce80_newmike-transcode.webm"
+    "https://cdn.prod.website-files.com/63b5222642c2133d9163ce80_newmike-transcode.webm"
   ],
   onStartConversation,
-  forceGif = false
+  forceGif = false,
+  onUserSpeakingChange,
+  onReplicaSpeakingChange
 }: VideoBoxProps) {
   const [showOverlay, setShowOverlay] = useState(true);
   const [videoError, setVideoError] = useState(false);
@@ -41,6 +45,8 @@ export function VideoBox({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isReplicaSpeaking, setIsReplicaSpeaking] = useState(false);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Daily React hooks
@@ -65,10 +71,47 @@ export function VideoBox({
     }
   }, [participantIds, localParticipant, isInChat, isConnected]);
 
+  // Notify parent component when user speaking state changes
+  useEffect(() => {
+    if (onUserSpeakingChange) {
+      onUserSpeakingChange(isUserSpeaking);
+    }
+  }, [isUserSpeaking, onUserSpeakingChange]);
+
+  // Notify parent component when replica speaking state changes
+  useEffect(() => {
+    if (onReplicaSpeakingChange) {
+      onReplicaSpeakingChange(isReplicaSpeaking);
+    }
+  }, [isReplicaSpeaking, onReplicaSpeakingChange]);
+
+  // Debug logging for replica speaking state
+  useEffect(() => {
+    console.log('🔄 isReplicaSpeaking state changed:', isReplicaSpeaking);
+  }, [isReplicaSpeaking]);
+
   // Daily React event handlers
   useDailyEvent('joined-meeting', () => {
     console.log('Joined Daily meeting successfully');
     setIsConnected(true);
+
+    // Enable noise cancellation when joining the meeting
+    if (daily) {
+      setTimeout(async () => {
+        try {
+          await daily.updateInputSettings({
+            audio: {
+              processor: {
+                type: 'noise-cancellation',
+              },
+            },
+          });
+          console.log('✅ Noise cancellation enabled successfully');
+        } catch (error) {
+          console.error('❌ Failed to enable noise cancellation:', error);
+        }
+      }, 1000); // Small delay to ensure call frame is fully ready
+    }
   });
 
   useDailyEvent('left-meeting', () => {
@@ -84,10 +127,41 @@ export function VideoBox({
   useDailyEvent('app-message', (event) => {
     console.log('App message received:', event);
 
-    // Check if this is a conversation utterance event
-    if (event.data?.message_type === 'conversation' && event.data?.event_type === 'conversation.utterance') {
-      console.log('Utterance event received:', event.data);
-      addUtteranceMessage(event.data);
+    const { message_type, event_type } = event.data || {};
+
+    if (message_type === 'conversation') {
+      switch (event_type) {
+        case 'conversation.utterance':
+          console.log('Utterance event received:', event.data);
+          addUtteranceMessage(event.data);
+          break;
+
+        case 'conversation.replica.started_speaking':
+          console.log('🟢 Replica started speaking:', event.data);
+          setIsReplicaSpeaking(true);
+          break;
+
+        case 'conversation.replica.stopped_speaking':
+          console.log('🔴 Replica stopped speaking:', event.data);
+          setIsReplicaSpeaking(false);
+          break;
+
+        case 'conversation.user.started_speaking':
+          console.log('🎤 User started speaking:', event.data);
+          setIsUserSpeaking(true);
+          break;
+
+        case 'conversation.user.stopped_speaking':
+          console.log('🔇 User stopped speaking:', event.data);
+          setIsUserSpeaking(false);
+          break;
+      }
+    } else if (message_type === 'system') {
+      switch (event_type) {
+        case 'system.replica_joined':
+          console.log('🤖 Replica joined the conversation:', event.data);
+          break;
+      }
     }
   });
 
@@ -122,6 +196,42 @@ export function VideoBox({
       console.log(`🎯 FINAL TRANSCRIPT [${transcriptData.speaker}]: "${transcriptData.text}"`);
     }
   });
+
+  // Function to append conversation context to Tavus
+  const appendConversationContext = useCallback(async (context: string) => {
+    if (!daily || !conversationId) return;
+
+    try {
+      await daily.sendAppMessage({
+        message_type: 'conversation',
+        event_type: 'conversation.append_llm_context',
+        conversation_id: conversationId,
+        properties: {
+          context: context
+        }
+      });
+      console.log('✅ Conversation context appended successfully:', context);
+    } catch (error) {
+      console.error('❌ Failed to append conversation context:', error);
+    }
+  }, [daily, conversationId]);
+
+  // Append context whenever messages change
+  useEffect(() => {
+    if (messages.length > 0 && conversationId) {
+      // Only append the latest message to avoid sending duplicate context
+      const latestMessage = messages[messages.length - 1];
+
+      console.log('🔄 New message added, appending latest message to context...');
+      console.log('📝 Latest message:', latestMessage);
+
+      // Format just the latest message
+      const formattedContext = `${latestMessage.role === 'user' ? 'User' : 'Assistant'}: ${latestMessage.text}`;
+
+      console.log('📋 Formatted context to append:', formattedContext);
+      appendConversationContext(formattedContext);
+    }
+  }, [messages, conversationId, appendConversationContext]);
 
 
   const handleStartConversation = async () => {
@@ -246,11 +356,25 @@ export function VideoBox({
 
   return (
     <div className="relative w-full h-full">
-      <div className="relative w-full h-full overflow-hidden p-6">
+      <div className="relative w-full h-full overflow-hidden p-0">
         {/* Video Element or Daily Video */}
         {isInChat && conversationUrl ? (
           // Daily Video Call
-          <div className="w-full h-full relative bg-black rounded-2xl overflow-hidden shadow-2xl">
+          <div className="w-full h-full relative overflow-hidden">
+            {/* Animated gradient overlay when replica is speaking */}
+            {isReplicaSpeaking && (
+              <div className="absolute inset-0 z-15 pointer-events-none">
+                {/* Top edge gradient */}
+                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-gradient-move" />
+                {/* Right edge gradient */}
+                <div className="absolute top-0 right-0 bottom-0 w-2 bg-gradient-to-b from-blue-500 via-cyan-500 to-purple-500 animate-gradient-move-reverse" />
+                {/* Bottom edge gradient */}
+                <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-l from-purple-500 via-pink-500 to-blue-500 animate-gradient-move" />
+                {/* Left edge gradient */}
+                <div className="absolute top-0 left-0 bottom-0 w-2 bg-gradient-to-t from-blue-500 via-cyan-500 to-purple-500 animate-gradient-move-reverse" />
+              </div>
+            )}
+
             {/* DailyAudio component handles all participants' audio */}
             <DailyAudio />
 
@@ -290,13 +414,30 @@ export function VideoBox({
           </div>
         ) : (
           // Preview Video/GIF
-          <div className="w-full h-full relative bg-black rounded-2xl overflow-hidden shadow-2xl">
+          <div className="w-full h-full relative overflow-hidden">
+            {/* Animated gradient overlay when replica is speaking */}
+            {isReplicaSpeaking && (
+              <div className="absolute inset-0 z-15 pointer-events-none">
+                {/* Top edge gradient */}
+                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-gradient-move" />
+                {/* Right edge gradient */}
+                <div className="absolute top-0 right-0 bottom-0 w-2 bg-gradient-to-b from-blue-500 via-cyan-500 to-purple-500 animate-gradient-move-reverse" />
+                {/* Bottom edge gradient */}
+                <div className="absolute bottom-0 left-0 right-0 h-2 bg-gradient-to-l from-purple-500 via-pink-500 to-blue-500 animate-gradient-move" />
+                {/* Left edge gradient */}
+                <div className="absolute top-0 left-0 bottom-0 w-2 bg-gradient-to-t from-blue-500 via-cyan-500 to-purple-500 animate-gradient-move-reverse" />
+              </div>
+            )}
+
             {!videoError && !forceGif ? (
               <video
                 ref={videoRef}
                 className="w-full h-full object-cover"
                 poster={posterUrl}
                 muted
+                autoPlay
+                loop
+                preload="auto"
                 playsInline
                 onError={handleVideoError}
                 style={{ width: '100%', height: '100%' }}
@@ -308,18 +449,15 @@ export function VideoBox({
               </video>
             ) : (
               <Image
-                src="https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f/67bf72cdf131ec10cbd8c67b_newmike%20(1).gif"
+                src="https://cdn.prod.website-files.com/63b2f566abde4cad39ba419f%2F67bf72cdf131ec10cbd8c67b_newmike%20(1).gif"
                 alt="Charlie calling"
                 fill
-                priority
                 className="object-cover"
-                unoptimized
+                priority={false}
               />
             )}
           </div>
         )}
-
-
 
         {/* Call Controls - Show when connected */}
         {isInChat && isConnected && !showFeedback && (
@@ -381,16 +519,17 @@ export function VideoBox({
 
         {/* Preview Overlay */}
         {showOverlay && !isInChat && (
-          <div className="absolute inset-6 bg-black/30 flex flex-col justify-end z-30 rounded-2xl">
+          <div className="absolute inset-0 bg-black/20 flex flex-col justify-end z-30">
             {/* Bottom section with button */}
-            <div className="flex justify-center pb-8">
+            <div className="flex justify-center pb-6">
               <StatefulButton
                 onClick={handleStartConversation}
                 loadingText="Connecting..."
                 successText="Connected!"
                 className="min-w-[180px] backdrop-blur-sm shadow-lg"
+                idleColor="hsla(322, 88%, 57%, 0.5)"
               >
-                Let&apos;s Chat
+                Let&apos;s Talk
               </StatefulButton>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST() {
   try {
     const apiKey = process.env.TAVUS_API_KEY;
-    
+
     if (!apiKey) {
       return NextResponse.json(
         { error: 'Tavus API key not configured. Please set TAVUS_API_KEY in your environment variables.' },
@@ -12,7 +12,7 @@ export async function POST() {
     }
 
     // Parse document IDs from environment variable
-    const documentIds = process.env.TAVUS_DOCUMENT_IDS 
+    const documentIds = process.env.TAVUS_DOCUMENT_IDS
       ? process.env.TAVUS_DOCUMENT_IDS.split(',').map(id => id.trim()).filter(id => id.length > 0)
       : [];
 
@@ -54,7 +54,7 @@ export async function POST() {
     }
 
     const conversationData = await tavusResponse.json();
-    
+
     return NextResponse.json({
       success: true,
       conversation: conversationData

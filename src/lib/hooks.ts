@@ -1,10 +1,10 @@
 import { useAtom } from 'jotai';
-import { conversationAtom, isLoadingAtom, meetingResultAtom, errorAtom, messagesAtom } from './store';
-import type { Conversation, ChatMessage } from './store';
+import type { ChatMessage, Conversation } from './store';
+import { conversationAtom, errorAtom, isLoadingAtom, meetingResultAtom, messagesAtom } from './store';
 
 export const useConversation = () => {
   const [conversation, setConversation] = useAtom(conversationAtom);
-  
+
   const updateConversation = (updates: Partial<Conversation>) => {
     if (conversation) {
       setConversation({ ...conversation, ...updates });
