@@ -80,7 +80,9 @@ export function StreamingMessage({
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight, rehypeRaw]}
             components={{
-              code: ({ inline, className, children, ...props }: any) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              code: (props: any) => {
+                const { inline, className, children, ...restProps } = props;
                 if (inline) {
                   return (
                     <code
@@ -90,7 +92,7 @@ export function StreamingMessage({
                           ? "bg-gray-200 text-gray-800"
                           : "bg-blue-400 text-blue-50"
                       )}
-                      {...props}
+                      {...restProps}
                     >
                       {children}
                     </code>
@@ -103,29 +105,29 @@ export function StreamingMessage({
                 const language = match ? match[1] : '';
 
                 return (
-                  <code className={`language-${language} text-gray-100 text-sm`} {...props}>
+                  <code className={`language-${language} text-gray-100 text-sm`} {...restProps}>
                     {children}
                   </code>
                 );
               },
-              pre: ({ children, ...props }: any) => (
+              pre: ({ children, ...props }) => (
                 <pre className="bg-gray-900 rounded-lg p-4 overflow-x-auto my-3 -mx-1" {...props}>
                   {children}
                 </pre>
               ),
-              p: ({ children }: any) => (
+              p: ({ children }) => (
                 <p className="mb-2 last:mb-0">{children}</p>
               ),
-              ul: ({ children }: any) => (
+              ul: ({ children }) => (
                 <ul className="list-disc list-inside ml-4 mb-2">{children}</ul>
               ),
-              ol: ({ children }: any) => (
+              ol: ({ children }) => (
                 <ol className="list-decimal list-inside ml-4 mb-2">{children}</ol>
               ),
-              li: ({ children }: any) => (
+              li: ({ children }) => (
                 <li className="mb-1">{children}</li>
               ),
-              blockquote: ({ children }: any) => (
+              blockquote: ({ children }) => (
                 <blockquote className={cn(
                   "border-l-4 pl-4 my-2 italic",
                   isReplica ? "border-gray-300 text-gray-600" : "border-blue-300 text-blue-100"
@@ -133,34 +135,34 @@ export function StreamingMessage({
                   {children}
                 </blockquote>
               ),
-              h1: ({ children }: any) => (
+              h1: ({ children }) => (
                 <h1 className="text-lg font-bold mb-2 mt-3 first:mt-0">{children}</h1>
               ),
-              h2: ({ children }: any) => (
+              h2: ({ children }) => (
                 <h2 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h2>
               ),
-              h3: ({ children }: any) => (
+              h3: ({ children }) => (
                 <h3 className="text-sm font-bold mb-2 mt-3 first:mt-0">{children}</h3>
               ),
-              strong: ({ children }: any) => (
+              strong: ({ children }) => (
                 <strong className="font-semibold">{children}</strong>
               ),
-              em: ({ children }: any) => (
+              em: ({ children }) => (
                 <em className="italic">{children}</em>
               ),
-              table: ({ children }: any) => (
+              table: ({ children }) => (
                 <div className="overflow-x-auto my-3">
                   <table className="min-w-full border border-gray-200 rounded">
                     {children}
                   </table>
                 </div>
               ),
-              th: ({ children }: any) => (
+              th: ({ children }) => (
                 <th className="border border-gray-200 bg-gray-50 px-2 py-1 text-left text-xs font-medium">
                   {children}
                 </th>
               ),
-              td: ({ children }: any) => (
+              td: ({ children }) => (
                 <td className="border border-gray-200 px-2 py-1 text-xs">
                   {children}
                 </td>
