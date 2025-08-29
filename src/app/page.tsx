@@ -9,11 +9,11 @@ export default function Home() {
   const [isReplicaSpeaking, setIsReplicaSpeaking] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="h-screen flex gap-4 p-4">
+    <div className="min-h-screen" style={{ backgroundColor: '#E3DCD1' }}>
+      <div className="h-screen flex">
         {/* Left Section - Video Display Area (60%) */}
-        <div className="w-3/5 bg-gray-50 relative">
-          <div className="h-full rounded-2xl overflow-hidden border border-gray-200 bg-white">
+        <div className="w-3/5 relative">
+          <div className="h-full overflow-hidden bg-white">
             <VideoBox
               onUserSpeakingChange={setIsUserSpeaking}
               onReplicaSpeakingChange={setIsReplicaSpeaking}
@@ -22,7 +22,7 @@ export default function Home() {
         </div>
 
         {/* Right Section - Conversation Panel (40%) */}
-        <div className="w-2/5 bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div className="w-2/5 overflow-hidden">
           <Conversation
             isUserSpeaking={isUserSpeaking}
             isReplicaSpeaking={isReplicaSpeaking}

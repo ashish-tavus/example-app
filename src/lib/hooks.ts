@@ -75,9 +75,18 @@ export const useMessages = () => {
   const addUtteranceMessage = (utteranceEvent: UtteranceEvent) => {
     const { properties } = utteranceEvent;
     if (properties?.role && properties?.speech) {
+      // Filter out context messages that start with debug indicators or formatted context
+      const speech = properties.speech;
+      if (speech.startsWith('📋 Formatted context to append:') ||
+        speech.startsWith('User:') ||
+        speech.startsWith('Assistant:')) {
+        console.log('Filtering out context message:', speech);
+        return;
+      }
+
       addMessage({
         role: properties.role,
-        text: properties.speech,
+        text: speech,
         visualContext: properties.visual_context,
       });
     }

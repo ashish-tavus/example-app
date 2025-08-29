@@ -225,11 +225,11 @@ export function VideoBox({
       console.log('🔄 New message added, appending latest message to context...');
       console.log('📝 Latest message:', latestMessage);
 
-      // Format just the latest message
-      const formattedContext = `${latestMessage.role === 'user' ? 'User' : 'Assistant'}: ${latestMessage.text}`;
+      // Send just the message content without role prefixes to avoid echo
+      const messageContent = latestMessage.text;
 
-      console.log('📋 Formatted context to append:', formattedContext);
-      appendConversationContext(formattedContext);
+      console.log('📋 Context to append:', messageContent);
+      appendConversationContext(messageContent);
     }
   }, [messages, conversationId, appendConversationContext]);
 
